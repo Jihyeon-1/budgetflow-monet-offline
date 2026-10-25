@@ -260,3 +260,21 @@ input:focus, select:focus, textarea:focus {
     scroll-behavior: auto !important;
   }
 }
+
+/* 모네 그림이 보이는 전체 배경 — 최종 수정 */
+body {
+  min-height: 100vh;
+  background:
+    linear-gradient(
+      rgba(250, 248, 253, 0.45),
+      rgba(246, 242, 250, 0.55)
+    ),
+    url("/monet/background.jpg")
+      center center / cover no-repeat !important;
+}
+
+/* 기존 연보라 배경을 가리던 레이어 제거 */
+body::before,
+body::after {
+  display: none !important;
+}

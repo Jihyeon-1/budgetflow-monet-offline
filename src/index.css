@@ -1,0 +1,251 @@
+@import "tailwindcss";
+
+/* ───────────────────────────────────────────────
+   Monet watercolor theme
+   - Tailwind 색상 토큰(slate/teal/rose/emerald/amber)을 모네 팔레트로 재정의
+     → 기존 클래스(bg-slate-900, text-teal-700 …)가 그대로 수채화 톤이 됩니다.
+   ─────────────────────────────────────────────── */
+@theme {
+  --font-sans: "Gowun Dodum", "Noto Sans KR", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-display: "Gowun Batang", "Noto Serif KR", serif;
+  --font-mono: "Gowun Batang", "Noto Serif KR", ui-serif, serif;
+
+  /* 안개 낀 연못빛 보라-남색 (기존 slate) */
+  --color-slate-50: #f7f5fb;
+  --color-slate-100: #eeebf7;
+  --color-slate-200: #ddd9ee;
+  --color-slate-300: #c4bfdd;
+  --color-slate-400: #9d9abf;
+  --color-slate-500: #6f6d96;
+  --color-slate-600: #575680;
+  --color-slate-700: #424169;
+  --color-slate-800: #313058;
+  --color-slate-900: #242749;
+  --color-slate-950: #161833;
+
+  /* 수련 연못의 푸른 물빛 (기존 teal) */
+  --color-teal-50: #eef4fb;
+  --color-teal-100: #dce8f6;
+  --color-teal-200: #bdd3ee;
+  --color-teal-300: #94b7e0;
+  --color-teal-400: #6d98cf;
+  --color-teal-500: #5180c0;
+  --color-teal-600: #4169a8;
+  --color-teal-700: #345793;
+  --color-teal-800: #2c4779;
+  --color-teal-900: #253a60;
+  --color-teal-950: #1a2848;
+
+  /* 양귀비 붉은색 (지출/경고, 기존 rose) */
+  --color-rose-50: #fdf1ee;
+  --color-rose-100: #fbe0d9;
+  --color-rose-200: #f6c4b8;
+  --color-rose-300: #eea08e;
+  --color-rose-400: #e67c65;
+  --color-rose-500: #d95d44;
+  --color-rose-600: #c44830;
+  --color-rose-700: #a43b28;
+  --color-rose-800: #862f1f;
+  --color-rose-900: #6d291c;
+  --color-rose-950: #3e150d;
+
+  /* 수련 잎 초록 (수입/긍정, 기존 emerald) */
+  --color-emerald-50: #f1f7ed;
+  --color-emerald-100: #e0eed9;
+  --color-emerald-200: #c4dcb7;
+  --color-emerald-300: #a0c58f;
+  --color-emerald-400: #7bac69;
+  --color-emerald-500: #5e924d;
+  --color-emerald-600: #4a7b3c;
+  --color-emerald-700: #3d6532;
+  --color-emerald-800: #33522c;
+  --color-emerald-900: #2b4326;
+
+  /* 햇살 노랑 (기존 amber) */
+  --color-amber-50: #fdf8e8;
+  --color-amber-100: #faefc6;
+  --color-amber-200: #f4e08f;
+  --color-amber-300: #ecce5c;
+  --color-amber-400: #e2bb3a;
+  --color-amber-500: #cfa124;
+  --color-amber-600: #b0841a;
+  --color-amber-700: #8c6a18;
+  --color-amber-800: #70551a;
+  --color-amber-900: #5d4619;
+}
+
+:root {
+  --paper: #f4f1f8;
+  --ink: #242749;
+  --glass: rgba(255, 255, 255, 0.66);
+  --glass-strong: rgba(255, 255, 255, 0.82);
+  --glass-border: rgba(131, 124, 188, 0.28);
+  --wash-shadow: 0 6px 24px -10px rgba(60, 64, 130, 0.30), 0 1px 3px rgba(60, 64, 130, 0.08);
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    color: var(--ink);
+    background-color: var(--paper);
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    text-wrap: balance;
+    letter-spacing: -0.01em;
+  }
+}
+
+/* ── 배경: 흐릿하게 번진 수채화 물감 ───────────────────────── */
+body {
+  position: relative;
+  background-color: var(--paper) !important;
+  min-height: 100vh;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: -60px;
+  z-index: -2;
+  background:
+    radial-gradient(60% 50% at 12% 8%, rgba(147, 183, 233, 0.55), transparent 70%),
+    radial-gradient(55% 45% at 90% 14%, rgba(178, 160, 224, 0.45), transparent 70%),
+    radial-gradient(50% 45% at 80% 88%, rgba(152, 198, 150, 0.40), transparent 70%),
+    radial-gradient(45% 40% at 8% 90%, rgba(244, 196, 160, 0.35), transparent 70%),
+    url("/monet/lilies.jpg") center / cover no-repeat;
+  filter: blur(34px) saturate(1.05);
+  opacity: 0.9;
+}
+
+/* 캔버스/종이 결 */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.3  0 0 0 0 0.28  0 0 0 0 0.45  0 0 0 0.09 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  background-color: rgba(247, 245, 251, 0.35);
+  mix-blend-mode: multiply;
+}
+
+/* ── 레이아웃이 깔아둔 불투명 흰색 → 반투명 유리/수채 종이 ──── */
+.bg-white {
+  background-color: var(--glass) !important;
+  -webkit-backdrop-filter: blur(14px) saturate(1.15);
+  backdrop-filter: blur(14px) saturate(1.15);
+}
+.bg-white\/95 {
+  background-color: var(--glass-strong) !important;
+}
+.bg-slate-50, .bg-slate-50\/70, .bg-slate-50\/80 {
+  background-color: rgba(238, 235, 247, 0.55) !important;
+}
+
+/* 사이드바 · 헤더는 한 겹 더 두껍게 */
+aside.bg-white, header.bg-white\/95 {
+  background-color: var(--glass-strong) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(1.2);
+  backdrop-filter: blur(22px) saturate(1.2);
+}
+
+/* 테두리는 보랏빛 번짐 */
+.border-slate-200, .border-slate-300, .border-slate-100, .border-slate-200\/80 {
+  border-color: var(--glass-border) !important;
+}
+.divide-slate-100 > :not(:last-child), .divide-y > :not(:last-child) {
+  border-color: rgba(131, 124, 188, 0.2);
+}
+
+/* 카드: 둥글고 부드러운 그림자 */
+.rounded-lg { border-radius: 0.9rem !important; }
+.rounded-xl { border-radius: 1.15rem !important; }
+.rounded-2xl { border-radius: 1.5rem !important; }
+.rounded-md { border-radius: 0.65rem !important; }
+
+.shadow-xs, .shadow-2xs, .shadow-sm, .shadow-md {
+  box-shadow: var(--wash-shadow) !important;
+}
+
+/* 진한 버튼(bg-slate-900)은 붓터치 같은 남색→청보라 그라데이션 */
+.bg-slate-900:not([class*="/"]) {
+  background-image: linear-gradient(135deg, #2c3a78 0%, #3f4f9a 55%, #5a5fae 100%);
+  box-shadow: 0 6px 16px -8px rgba(44, 58, 120, 0.7);
+}
+.bg-slate-900:not([class*="/"]):hover {
+  filter: brightness(1.08);
+}
+.bg-teal-800 {
+  background-image: linear-gradient(135deg, #2c4779 0%, #4169a8 100%);
+}
+
+/* 입력창 */
+input, select, textarea {
+  background-color: rgba(255, 255, 255, 0.72);
+}
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(109, 152, 207, 0.35);
+}
+
+/* 모달 뒷배경: 안개처럼 */
+.bg-slate-900\/50, .bg-slate-900\/40 {
+  background-color: rgba(36, 39, 73, 0.38) !important;
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+/* ── 총 자산 요약 카드: 모네의 수련 그림 위에 남색 안개 ──── */
+.monet-hero {
+  position: relative;
+  overflow: hidden;
+  color: #fff;
+  background:
+    linear-gradient(115deg, rgba(24, 33, 78, 0.86) 0%, rgba(38, 52, 112, 0.66) 48%, rgba(52, 70, 128, 0.36) 100%),
+    url("/monet/lilies.jpg") center 35% / cover no-repeat;
+  box-shadow: 0 18px 40px -18px rgba(36, 50, 110, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+.monet-hero .bg-white,
+.monet-hero [class*="bg-white/"] {
+  background-color: rgba(255, 255, 255, 0.12) !important;
+}
+.monet-hero [class*="bg-slate-800"], .monet-hero [class*="bg-slate-900"], .monet-hero [class*="bg-teal-9"] {
+  background-image: none;
+  background-color: rgba(255, 255, 255, 0.12) !important;
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+/* 사이드바 로고 / 하단 장식: 개양귀비 들판 */
+.monet-poppy-strip {
+  height: 54px;
+  background: url("/monet/poppies.jpg") center / cover no-repeat;
+  border-radius: 0.9rem;
+  opacity: 0.9;
+  mask-image: linear-gradient(to bottom, transparent, #000 40%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 40%);
+}
+
+/* 선택 영역 */
+::selection { background: #6d98cf; color: #fff; }
+
+/* 스크롤바 */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: rgba(131, 124, 188, 0.4); border-radius: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

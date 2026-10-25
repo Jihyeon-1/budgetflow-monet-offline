@@ -1,0 +1,8 @@
+{
+  "name": "BudgetFlow",
+  "description": "Easily manage your budget and visualize your spending habits with clear, insightful charts and daily tracking.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

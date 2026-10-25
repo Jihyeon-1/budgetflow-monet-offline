@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   BarChart3,
+  HardDriveDownload,
   Building2,
   ChevronLeft,
   ChevronRight,
@@ -14,38 +15,17 @@ import {
   Wallet,
   X,
 } from 'lucide-react';
-import { User, onAuthStateChanged } from 'firebase/auth';
-import { collection, doc, onSnapshot } from 'firebase/firestore';
-import {
-  auth,
-  db,
-  deleteInvestmentFromFirestore,
-  deleteTransactionFromFirestore,
-  handleFirestoreError,
-  logOut,
-  OperationType,
-  signInWithGoogle,
-  syncBankAccountsToFirestore,
-  syncBudgetsToFirestore,
-  syncCategoriesToFirestore,
-  syncInvestmentsToFirestore,
-  syncTransactionToFirestore,
-} from './lib/firebase';
 import { BudgetsView } from './components/BudgetsView';
 import { DashboardView } from './components/DashboardView';
 import { InvestmentView } from './components/InvestmentView';
 import { SettingsView } from './components/SettingsView';
 import { TransactionModal } from './components/TransactionModal';
 import { TransactionsView } from './components/TransactionsView';
-import { AuthModal } from './components/AuthModal';
 import {
   DEFAULT_ANCHOR_MONTH,
   DEFAULT_TODAY,
-  INITIAL_BANK_ACCOUNTS,
   INITIAL_BUDGETS,
   INITIAL_CATEGORIES,
-  INITIAL_INVESTMENTS,
-  INITIAL_TRANSACTIONS,
 } from './data/seedData';
 import {
   ActiveTab,
@@ -102,19 +82,19 @@ const NAV_ITEMS: {
 
 export default function App() {
   const [transactions, setTransactions] = useState<Transaction[]>(() =>
-    loadStorage(STORAGE_KEYS.TRANSACTIONS, INITIAL_TRANSACTIONS)
+    loadStorage(STORAGE_KEYS.TRANSACTIONS, [] as Transaction[])
   );
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>(() =>
-    loadStorage(STORAGE_KEYS.ACCOUNTS, INITIAL_BANK_ACCOUNTS)
+    loadStorage(STORAGE_KEYS.ACCOUNTS, [] as BankAccount[])
   );
   const [categories, setCategories] = useState<Category[]>(() =>
     loadStorage(STORAGE_KEYS.CATEGORIES, INITIAL_CATEGORIES)
   );
   const [investments, setInvestments] = useState<InvestmentAsset[]>(() =>
-    loadStorage(STORAGE_KEYS.INVESTMENTS, INITIAL_INVESTMENTS)
+    loadStorage(STORAGE_KEYS.INVESTMENTS, [] as InvestmentAsset[])
   );
   const [budgets, setBudgets] = useState<CategoryBudgetMap>(() =>
-    loadStorage(STORAGE_KEYS.BUDGETS, INITIAL_BUDGETS)
+    loadStorage(STORAGE_KEYS.BUDGETS, {} as CategoryBudgetMap)
   );
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
@@ -123,7 +103,6 @@ export default function App() {
 
   // Modal
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
   const [statusNotice, setStatusNotice] = useState<string | null>(null);
 
@@ -137,115 +116,15 @@ export default function App() {
     'date_desc' | 'date_asc' | 'amount_desc' | 'amount_asc'
   >('date_desc');
 
-  // Firebase Authentication & Firestore DB Persistence State
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [isDbSynced, setIsDbSynced] = useState<boolean>(false);
-
-  // Persistence (Local Storage fallback)
+  // 기기 저장 전용: 로그인이나 클라우드 서버에 연결하지 않습니다.
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(transactions));
+    try {
+      localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(transactions));
+    } catch (error) {
+      console.error('기기 저장 실패:', error);
+      setStatusNotice('저장 공간이 부족합니다. 설정에서 백업해 주세요.');
+    }
   }, [transactions]);
-
-  // Firebase Real-time Firestore sync listener
-  useEffect(() => {
-    const unsubAuth = onAuthStateChanged(auth, async (user) => {
-      setCurrentUser(user);
-      if (user) {
-        setIsDbSynced(true);
-        const userLabel = user.email || (user.isAnonymous ? '익명 게스트' : user.uid.slice(0, 8));
-        setStatusNotice(`Firestore DB 자동 연동 활성화 (${userLabel})`);
-
-        // Real-time Transactions listener
-        const txPath = `users/${user.uid}/transactions`;
-        const unsubTxs = onSnapshot(
-          collection(db, 'users', user.uid, 'transactions'),
-          (snap) => {
-            if (!snap.empty) {
-              const remoteTxs = snap.docs.map((d) => d.data() as Transaction);
-              setTransactions(remoteTxs);
-            } else {
-              transactions.forEach((tx) => syncTransactionToFirestore(user.uid, tx));
-            }
-          },
-          (err) => handleFirestoreError(err, OperationType.GET, txPath)
-        );
-
-        // Real-time Bank Accounts listener
-        const accPath = `users/${user.uid}/bankAccounts`;
-        const unsubAccs = onSnapshot(
-          collection(db, 'users', user.uid, 'bankAccounts'),
-          (snap) => {
-            if (!snap.empty) {
-              const remoteAccs = snap.docs.map((d) => d.data() as BankAccount);
-              setBankAccounts(remoteAccs);
-            } else {
-              syncBankAccountsToFirestore(user.uid, bankAccounts);
-            }
-          },
-          (err) => handleFirestoreError(err, OperationType.GET, accPath)
-        );
-
-        // Real-time Investments listener
-        const invPath = `users/${user.uid}/investments`;
-        const unsubInvs = onSnapshot(
-          collection(db, 'users', user.uid, 'investments'),
-          (snap) => {
-            if (!snap.empty) {
-              const remoteInvs = snap.docs.map((d) => d.data() as InvestmentAsset);
-              setInvestments(remoteInvs);
-            } else {
-              syncInvestmentsToFirestore(user.uid, investments);
-            }
-          },
-          (err) => handleFirestoreError(err, OperationType.GET, invPath)
-        );
-
-        // Real-time Categories listener
-        const catPath = `users/${user.uid}/categories`;
-        const unsubCats = onSnapshot(
-          collection(db, 'users', user.uid, 'categories'),
-          (snap) => {
-            if (!snap.empty) {
-              const remoteCats = snap.docs.map((d) => d.data() as Category);
-              setCategories(remoteCats);
-            } else {
-              syncCategoriesToFirestore(user.uid, categories);
-            }
-          },
-          (err) => handleFirestoreError(err, OperationType.GET, catPath)
-        );
-
-        // Real-time Budgets listener
-        const budgetPath = `users/${user.uid}/settings/budgets`;
-        const unsubBudgets = onSnapshot(
-          doc(db, 'users', user.uid, 'settings', 'budgets'),
-          (snap) => {
-            if (snap.exists()) {
-              const data = snap.data();
-              if (data?.budgets) {
-                setBudgets(data.budgets as CategoryBudgetMap);
-              }
-            } else {
-              syncBudgetsToFirestore(user.uid, budgets);
-            }
-          },
-          (err) => handleFirestoreError(err, OperationType.GET, budgetPath)
-        );
-
-        return () => {
-          unsubTxs();
-          unsubAccs();
-          unsubInvs();
-          unsubCats();
-          unsubBudgets();
-        };
-      } else {
-        setIsDbSynced(false);
-      }
-    });
-
-    return () => unsubAuth();
-  }, []);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.ACCOUNTS, JSON.stringify(bankAccounts));
@@ -358,9 +237,6 @@ export default function App() {
       setTransactions((prev) =>
         prev.map((t) => (t.id === existingId ? updatedTx : t))
       );
-      if (currentUser) {
-        syncTransactionToFirestore(currentUser.uid, updatedTx);
-      }
       setStatusNotice(`'${txData.title}' 내역이 수정되었습니다.`);
     } else {
       const newTx: Transaction = {
@@ -368,10 +244,6 @@ export default function App() {
         id: `tx-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       };
       setTransactions((prev) => [newTx, ...prev]);
-
-      if (currentUser) {
-        syncTransactionToFirestore(currentUser.uid, newTx);
-      }
 
       // Automatically sync bank account balance!
       setBankAccounts((prev) =>
@@ -400,9 +272,6 @@ export default function App() {
     const target = transactions.find((t) => t.id === id);
     if (!target) return;
     setTransactions((prev) => prev.filter((t) => t.id !== id));
-    if (currentUser) {
-      deleteTransactionFromFirestore(currentUser.uid, id);
-    }
 
     // Revert bank account balance
     setBankAccounts((prev) =>
@@ -562,17 +431,10 @@ export default function App() {
         memo: `출금통장(${sourceAcc?.accountName ?? '통장'})에서 원금 출금 예치`,
       };
       setTransactions((prev) => [withdrawalTx, ...prev]);
-
-      if (currentUser) {
-        syncTransactionToFirestore(currentUser.uid, withdrawalTx);
-      }
     }
 
     setInvestments((prev) => {
       const next = [...prev, newAsset];
-      if (currentUser) {
-        syncInvestmentsToFirestore(currentUser.uid, next);
-      }
       return next;
     });
 
@@ -582,9 +444,6 @@ export default function App() {
   const handleEditAsset = (asset: InvestmentAsset) => {
     setInvestments((prev) => {
       const next = prev.map((a) => (a.id === asset.id ? asset : a));
-      if (currentUser) {
-        syncInvestmentsToFirestore(currentUser.uid, next);
-      }
       return next;
     });
     setStatusNotice(`'${asset.name}' 정보가 수정되었습니다.`);
@@ -594,9 +453,6 @@ export default function App() {
     const target = investments.find((i) => i.id === id);
     setInvestments((prev) => {
       const next = prev.filter((i) => i.id !== id);
-      if (currentUser) {
-        deleteInvestmentFromFirestore(currentUser.uid, id);
-      }
       return next;
     });
     if (target) setStatusNotice(`'${target.name}' 자산이 삭제되었습니다.`);
@@ -607,7 +463,6 @@ export default function App() {
     const newAcc: BankAccount = { ...acc, id: `acc-${Date.now()}` };
     setBankAccounts((prev) => {
       const next = [...prev, newAcc];
-      if (currentUser) syncBankAccountsToFirestore(currentUser.uid, next);
       return next;
     });
     setStatusNotice(`'${acc.accountName}' 통장이 새로 등록되었습니다.`);
@@ -616,7 +471,6 @@ export default function App() {
   const handleEditAccount = (acc: BankAccount) => {
     setBankAccounts((prev) => {
       const next = prev.map((a) => (a.id === acc.id ? acc : a));
-      if (currentUser) syncBankAccountsToFirestore(currentUser.uid, next);
       return next;
     });
     setStatusNotice(`'${acc.accountName}' 정보가 수정되었습니다.`);
@@ -626,7 +480,6 @@ export default function App() {
     const target = bankAccounts.find((a) => a.id === id);
     setBankAccounts((prev) => {
       const next = prev.filter((a) => a.id !== id);
-      if (currentUser) syncBankAccountsToFirestore(currentUser.uid, next);
       return next;
     });
     if (target) setStatusNotice(`'${target.accountName}' 통장이 삭제되었습니다.`);
@@ -637,7 +490,6 @@ export default function App() {
     const newCat: Category = { ...cat, id: `cat-${Date.now()}` };
     setCategories((prev) => {
       const next = [...prev, newCat];
-      if (currentUser) syncCategoriesToFirestore(currentUser.uid, next);
       return next;
     });
     setStatusNotice(`'${cat.label}' 카테고리가 새로 추가되었습니다.`);
@@ -646,7 +498,6 @@ export default function App() {
   const handleEditCategory = (cat: Category) => {
     setCategories((prev) => {
       const next = prev.map((c) => (c.id === cat.id ? cat : c));
-      if (currentUser) syncCategoriesToFirestore(currentUser.uid, next);
       return next;
     });
     setStatusNotice(`'${cat.label}' 카테고리가 수정되었습니다.`);
@@ -656,7 +507,6 @@ export default function App() {
     const target = categories.find((c) => c.id === id);
     setCategories((prev) => {
       const next = prev.filter((c) => c.id !== id);
-      if (currentUser) syncCategoriesToFirestore(currentUser.uid, next);
       return next;
     });
     if (target) setStatusNotice(`'${target.label}' 카테고리가 삭제되었습니다.`);
@@ -666,7 +516,6 @@ export default function App() {
   const handleUpdateCategoryBudget = (catId: string, amount: number) => {
     setBudgets((prev) => {
       const next = { ...prev, [catId]: amount };
-      if (currentUser) syncBudgetsToFirestore(currentUser.uid, next);
       return next;
     });
     setStatusNotice('예산 한도가 수정되었습니다.');
@@ -901,43 +750,16 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            {/* DB Auto Sync Status & Google Auth */}
-            {currentUser ? (
-              <div
-                onClick={() => setIsAuthModalOpen(true)}
-                className="flex items-center gap-2 rounded-lg border border-teal-200 bg-teal-50 px-2.5 py-1.5 text-xs shadow-2xs cursor-pointer hover:bg-teal-100 transition-colors"
-                title="클라우드 DB 연동 및 계정 정보 확인"
-              >
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-teal-600"></span>
-                </span>
-                <span className="font-bold text-teal-900 hidden sm:inline">DB 자동 연동됨</span>
-                <span className="text-teal-700 text-[11px] font-mono truncate max-w-[120px] hidden md:inline">
-                  {currentUser.email || (currentUser.isAnonymous ? '익명 게스트' : currentUser.uid.slice(0, 8))}
-                </span>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    logOut();
-                  }}
-                  className="text-[11px] font-bold text-teal-800 hover:text-teal-950 underline ml-1 cursor-pointer"
-                >
-                  로그아웃
-                </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setIsAuthModalOpen(true)}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-teal-300 bg-teal-50/80 px-3 py-1.5 text-xs font-bold text-teal-900 hover:bg-teal-100 transition-all shadow-2xs whitespace-nowrap cursor-pointer"
-                title="Google 로그인 또는 게스트 계정으로 Firestore DB 실시간 동기화 활성화"
-              >
-                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span>DB 자동 연동</span>
-              </button>
-            )}
+            {/* 완전 오프라인 모드 표시 */}
+            <button
+              type="button"
+              onClick={() => setActiveTab('settings')}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-teal-300 bg-teal-50/80 px-3 py-1.5 text-xs font-bold text-teal-900 whitespace-nowrap"
+              title="이 기기에만 저장됩니다. 설정에서 백업 파일을 보관하세요."
+            >
+              <HardDriveDownload className="h-3.5 w-3.5" />
+              <span>기기 저장 · 백업</span>
+            </button>
 
             <button
               type="button"
@@ -1121,6 +943,15 @@ export default function App() {
               onAddCategory={handleAddCategory}
               onEditCategory={handleEditCategory}
               onDeleteCategory={handleDeleteCategory}
+              backupData={{transactions, bankAccounts, categories, investments, budgets}}
+              onRestoreData={(data) => {
+                setTransactions(data.transactions);
+                setBankAccounts(data.bankAccounts);
+                setCategories(data.categories);
+                setInvestments(data.investments);
+                setBudgets(data.budgets);
+                setStatusNotice('백업 복원 완료! 모든 데이터가 기기에 저장됩니다.');
+              }}
             />
           )}
         </main>
@@ -1128,7 +959,7 @@ export default function App() {
         <footer className="border-t border-slate-200 bg-white px-4 py-4 text-xs text-slate-500 sm:px-8 mb-16 lg:mb-0">
           <div className="mx-auto flex max-w-[1280px] flex-wrap items-center justify-between gap-2">
             <span>BudgetFlow · 스마트 가계부, 통장 관리 & 투자 포트폴리오</span>
-            <span>데이터는 브라우저 로컬 저장소에 안전하게 유지됩니다</span>
+            <span>데이터는 이 기기에만 저장됩니다 · 정기적으로 백업해 주세요</span>
           </div>
         </footer>
 
@@ -1175,12 +1006,6 @@ export default function App() {
         onSave={handleSaveTransaction}
       />
 
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        currentUser={currentUser}
-        onClose={() => setIsAuthModalOpen(false)}
-        onSuccessNotice={(msg) => setStatusNotice(msg)}
-      />
     </div>
   );
 }

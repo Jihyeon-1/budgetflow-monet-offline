@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Building2,
   Check,
   CreditCard,
+  Download,
+  Upload,
+  ShieldCheck,
   Pencil,
   Plus,
   Tag,
@@ -11,11 +14,14 @@ import {
   X,
 } from 'lucide-react';
 import { BankAccount, Category, TransactionType } from '../types/ledger';
+import { BackupData, createBackup, parseBackup } from '../lib/backup';
 import { formatKRW } from '../utils/ledgerMath';
 
 interface SettingsViewProps {
   bankAccounts: BankAccount[];
   categories: Category[];
+  backupData: BackupData;
+  onRestoreData: (data: BackupData) => void;
   onAddAccount: (acc: Omit<BankAccount, 'id'>) => void;
   onEditAccount: (acc: BankAccount) => void;
   onDeleteAccount: (id: string) => void;
@@ -39,6 +45,8 @@ const PRESET_COLORS = [
 export const SettingsView: React.FC<SettingsViewProps> = ({
   bankAccounts,
   categories,
+  backupData,
+  onRestoreData,
   onAddAccount,
   onEditAccount,
   onDeleteAccount,
@@ -46,6 +54,52 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onEditCategory,
   onDeleteCategory,
 }) => {
+  const backupInputRef = useRef<HTMLInputElement>(null);
+  const [backupStatus, setBackupStatus] = useState('');
+
+  const handleBackup = async () => {
+    try {
+      const backup = createBackup(backupData);
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+      const filename = `BudgetFlow-backup-${new Date().toLocaleDateString('sv-SE')}.json`;
+      const file = new File([blob], filename, { type: 'application/json' });
+      // iPhone 홈 화면 웹앱에서는 공유 시트의 '파일에 저장'이 가장 안정적입니다.
+      if (navigator.canShare?.({ files: [file] }) && navigator.share) {
+        await navigator.share({ files: [file], title: 'BudgetFlow 가계부 백업' });
+      } else {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+      }
+      setBackupStatus('백업 파일을 저장했는지 확인해 주세요.');
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') return;
+      setBackupStatus('백업에 실패했습니다. Safari에서 열어 다시 시도해 주세요.');
+    }
+  };
+
+  const handleRestore = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      if (file.size > 25 * 1024 * 1024) throw new Error('파일이 너무 큽니다.');
+      const backup = parseBackup(await file.text());
+      if (!window.confirm(`이 기기에 저장된 데이터를 선택한 백업으로 교체할까요?\n\n백업 날짜: ${new Date(backup.exportedAt).toLocaleString('ko-KR')}\n거래 ${backup.data.transactions.length}건, 통장 ${backup.data.bankAccounts.length}개, 투자 ${backup.data.investments.length}개\n\n현재 데이터가 덮어쓰여집니다. 먼저 현재 데이터도 백업하는 것을 권장합니다.`)) return;
+      // 저장소 갱신 완료 후 React 상태 반영; 앱 새로고침도 이전 데이터를 복원할 수 있습니다.
+      onRestoreData(backup.data);
+      setBackupStatus('복원 완료. 화면의 데이터가 바뀌었는지 확인해 주세요.');
+    } catch (error) {
+      setBackupStatus(error instanceof Error ? `복원 실패: ${error.message}` : '복원 실패: 파일을 확인해 주세요.');
+    } finally {
+      e.target.value = '';
+    }
+  };
+
   // Account modal states
   const [accountModalOpen, setAccountModalOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<BankAccount | null>(null);
@@ -178,6 +232,34 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   return (
     <div className="space-y-8">
+      {/* 개인 가계부 데이터 백업 / 복원 */}
+      <section className="rounded-xl border border-teal-200 bg-white p-5 sm:p-6" aria-label="가계부 백업 및 복원">
+        <div className="flex items-center gap-2">
+          <ShieldCheck className="h-5 w-5 text-teal-700" />
+          <h2 className="text-base font-bold text-slate-900">내 가계부 백업 · 복원</h2>
+        </div>
+        <p className="mt-2 text-xs leading-6 text-slate-700">
+          로그인이나 서버 없이 이 아이폰에만 저장됩니다. 기기 변경·앱 삭제·저장공간 정리에 대비해
+          주기적으로 JSON 파일을 iCloud Drive 또는 파일 앱에 저장하세요.
+        </p>
+        <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <button type="button" onClick={handleBackup}
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-3 text-sm font-bold text-white hover:bg-slate-800">
+            <Download className="h-4 w-4" /> 백업 파일 저장
+          </button>
+          <button type="button" onClick={() => backupInputRef.current?.click()}
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-900 hover:bg-slate-50">
+            <Upload className="h-4 w-4" /> 백업 파일 복원
+          </button>
+        </div>
+        <input ref={backupInputRef} type="file" accept=".json,application/json"
+          onChange={handleRestore} className="hidden" aria-label="가계부 JSON 백업 파일 선택" />
+        {backupStatus && <p role="status" className="mt-3 text-xs font-semibold text-teal-800">{backupStatus}</p>}
+        <p className="mt-3 text-[11px] leading-5 text-slate-600">
+          백업에는 거래·통장·카테고리·투자·예산 정보가 모두 포함됩니다. 파일은 암호화되어 있지 않으므로 타인에게 공유하지 마세요.
+          자동 기기간 동기화는 제공되지 않습니다.
+        </p>
+      </section>
       {/* 1. Bank Accounts Section (Requirement 2: 무슨 통장을 사용하고 있는지) */}
       <section className="rounded-xl border border-slate-200 bg-white p-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 pb-4">

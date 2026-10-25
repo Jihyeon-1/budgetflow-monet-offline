@@ -1,20 +1,47 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# BudgetFlow Final — Offline iPhone PWA
 
-# Run and deploy your AI Studio app
+최신 가계부 final.zip 원본 디자인 기반의 **로그인·Firebase 없는 기기 저장형 가계부**입니다.
 
-This contains everything you need to run your app locally.
+## 변경 사항
+- 대시보드/거래/예산/통장/투자 메뉴를 그대로 유지했습니다.
+- Google 로그인과 Firestore 접속 및 자동 업로드를 제거했습니다.
+- 처음 열면 예시 **거래/계좌/투자** 대신 빈 기록으로 시작합니다. 기본 카테고리는 남겨둡니다.
+- 설정 → **내 가계부 백업 · 복원**: JSON 파일 내보내기/가져오기.
+- PWA manifest와 아이콘, 오프라인 서비스 워커(빌드 시 생성)를 추가했습니다.
+- 구글 웹폰트 온라인 요청을 제거했습니다. 기기의 기본 글꼴로 폴백하므로 글꼴 모양이 조금 달라질 수 있습니다.
 
-View your app in AI Studio: https://ai.studio/apps/b6be74ba-937c-437f-9120-e3302624c2a1
+## 매우 중요: 기존 데이터 보호
+- 기존 Github 저장소를 바로 덮어쓰지 말고 새 저장소 또는 별도 브랜치에서 시험하세요.
+- 기존 AI Studio/Firebase 데이터는 **자동으로 복사되지 않습니다**.
+- 홈 화면 앱과 Safari 브라우저 저장소는 분리될 수 있으며, 서로 자동 동기화되지 않습니다.
+- 백업 파일(.json)은 암호화되지 않습니다. 개인 정보가 포함되므로 공개 GitHub 저장소에 업로드하지 마세요.
+- Safari/PWA 저장 데이터는 사용자가 앱을 지우거나 기기 저장공간을 정리하면 사라질 수 있습니다. **주 1회+기기 변경 전 백업**을 권장합니다.
+- 서비스 워커가 설치되려면 **최초 한 번 HTTPS로 앱 접속**해야 하며, 설치 후 비행기 모드 테스트를 해야 합니다. 캐시도 영구 보장되지는 않습니다.
+- '12시 투자 시세' 기능은 원래부터 실제 금융 시세 API가 아니라 **시뮬레이션**입니다. 네이버 증권 링크는 인터넷이 필요합니다.
 
-## Run Locally
+## 로컬 개발
+```bash
+npm install
+npm run dev
+```
 
-**Prerequisites:**  Node.js
+## 빌드
+```bash
+npm run build
+```
+`dist/` 안에 `sw.js`가 만들어집니다.
 
+## GitHub Pages에 무료로 게시하는 방법
+1. 별도의 **공개(public)** GitHub 저장소를 만드세요. GitHub Free에서는 Pages가 공개 저장소에 제공됩니다. **실제 가계부 데이터/백업을 커밋하지 마세요.**
+2. 이 ZIP 압축을 풀고, 내용 전체(`.github` 폴더 포함)를 새 저장소의 최상위에 업로드하세요.
+3. 저장소 `Settings` → `Pages` → `Build and deployment`에서 `Source: GitHub Actions`를 선택하세요.
+4. `Actions` 메뉴에서 `Deploy offline PWA to GitHub Pages` 성공을 확인하세요.
+5. `https://사용자이름.github.io/저장소이름/`을 아이폰 Safari로 여세요.
+6. `공유` → `홈 화면에 추가` → `웹 앱으로 열기` → `추가`를 선택하세요.
+7. **온라인에서 홈 화면 앱을 1~2회 실행**한 다음 비행기 모드로 열어서 작동을 확인하세요.
+8. 앱 `설정` → `내 가계부 백업 · 복원`에서 파일 내보내기/복원 시험 후 실제 내역을 입력하세요.
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+GitHub Pages에도 이용 정책과 기술적 사용량 제한이 있습니다. 개인용 앱이라고 해도 무기한 서비스가 보장되는 것은 아닙니다. **설치 후 데이터 입력 시에는 원격 서버에 요청하지 않으며 서버 측 가계부 처리 비용이 없습니다.**
+
+## Vercel에 게시하는 방법
+기존 저장소를 private로 유지하고 싶다면 Vercel Hobby에 같은 소스코드를 올려 배포할 수도 있습니다. Vercel 역시 무료 플랜 정책/사용량 제한이 있습니다. Vercel 배포에서는 환경 변수 `BASE_PATH`를 설정하지 않습니다.

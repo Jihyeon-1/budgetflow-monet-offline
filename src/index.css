@@ -107,16 +107,22 @@ body {
 body::before {
   content: "";
   position: fixed;
-  inset: -60px;
+  inset: 0;
   z-index: -2;
   background:
-    radial-gradient(60% 50% at 12% 8%, rgba(147, 183, 233, 0.55), transparent 70%),
-    radial-gradient(55% 45% at 90% 14%, rgba(178, 160, 224, 0.45), transparent 70%),
-    radial-gradient(50% 45% at 80% 88%, rgba(152, 198, 150, 0.40), transparent 70%),
-    radial-gradient(45% 40% at 8% 90%, rgba(244, 196, 160, 0.35), transparent 70%),
-    url("/monet/lilies.jpg") center / cover no-repeat;
-  filter: blur(34px) saturate(1.05);
-  opacity: 0.9;
+    linear-gradient(
+      180deg,
+      rgba(250, 248, 253, 0.72) 0%,
+      rgba(245, 241, 250, 0.58) 45%,
+      rgba(242, 238, 248, 0.68) 100%
+    ),
+    radial-gradient(42% 35% at 14% 12%, rgba(145, 179, 225, 0.22), transparent 72%),
+    radial-gradient(38% 32% at 88% 16%, rgba(188, 168, 227, 0.18), transparent 70%),
+    radial-gradient(32% 28% at 82% 84%, rgba(156, 196, 162, 0.16), transparent 70%),
+    url("/monet/background.jpg") center center / cover no-repeat;
+  filter: blur(10px) saturate(1.03);
+  transform: scale(1.03);
+  opacity: 1;
 }
 
 /* 캔버스/종이 결 */
@@ -203,10 +209,15 @@ input:focus, select:focus, textarea:focus {
   overflow: hidden;
   color: #fff;
   background:
-    linear-gradient(115deg, rgba(24, 33, 78, 0.86) 0%, rgba(38, 52, 112, 0.66) 48%, rgba(52, 70, 128, 0.36) 100%),
-    url("/monet/lilies.jpg") center 35% / cover no-repeat;
-  box-shadow: 0 18px 40px -18px rgba(36, 50, 110, 0.65);
-  border: 1px solid rgba(255, 255, 255, 0.25);
+    linear-gradient(
+      115deg,
+      rgba(20, 31, 74, 0.72) 0%,
+      rgba(34, 50, 106, 0.52) 48%,
+      rgba(54, 72, 126, 0.26) 100%
+    ),
+    url("/monet/dashboard.jpg") center center / cover no-repeat;
+  box-shadow: 0 18px 40px -18px rgba(36, 50, 110, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.26);
 }
 .monet-hero .bg-white,
 .monet-hero [class*="bg-white/"] {
